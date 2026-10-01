@@ -1,225 +1,116 @@
-# LLM and AI-Infused Applications with Java & Spring AI
+# Spring AI 电商智能客服 RAG Demo
 
-Samples showing how to build Java applications powered by Generative AI and Large Language Models (LLMs) using [Spring AI](https://docs.spring.io/spring-ai/reference/).
+一个面向学习和作品集展示的轻量智能客服项目。系统读取本地 Markdown 知识库，完成文档切片、向量入库、相似度检索和 LLM 流式回答；知识库未命中时创建模拟人工客服工单。
 
-## 🛠️ Pre-Requisites
+## 核心功能
 
-* Java 25
-* Podman/Docker
+- Spring Boot 4 + Java 17
+- Spring AI + Ollama 本地模型
+- PGVector 向量存储
+- Markdown 文档读取与 Token 切片
+- Top-K 相似度检索和来源返回
+- SSE 流式输出
+- 知识库未命中自动创建人工工单
+- 本地 Docker Compose 环境，无网络爬虫
 
-## 💡 Use Cases
+## 处理流程
 
-* **[Chatbot](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/use-cases/chatbot)**
-  Chatbot using LLMs via Ollama.
+```text
+本地 Markdown 文档
+  → TokenTextSplitter 文档切片
+  → Ollama Embedding
+  → PGVector
 
-* **[Question Answering](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/use-cases/question-answering)**
-  Question answering with documents (RAG) using LLMs via Ollama and PGVector.
+用户问题
+  → 相似度检索
+  ├─ 命中：拼装上下文 → Ollama → SSE 流式回答
+  └─ 未命中：创建内存工单 → 返回 handoff 事件
+```
 
-* **[Semantic Search](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/use-cases/semantic-search)**
-  Semantic search using LLMs via Ollama and PGVector.
+## 环境要求
 
-* **[Structured Data Extraction](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/use-cases/structured-data-extraction)**  
-  Structured data extraction using LLMs via Ollama.
+- Java 17
+- Docker Desktop 或兼容的 Docker 环境
 
-* **[Text Classification](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/use-cases/text-classification)**
-  Text classification using LLMs via Ollama.
+## 启动
 
-## 🧠 Models
+启动 PGVector 和 Ollama：
 
-### Chat Models
+```powershell
+docker compose up -d
+```
 
-Chat completion with LLMs via different model providers:
+首次运行建议预先下载模型：
 
-* **[Mistral AI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/models/chat/chat-mistral-ai)**
-* **[Ollama](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/models/chat/chat-ollama)**
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/models/chat/chat-openai)**
-* **[Multiple Providers](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/models/chat/chat-multiple-providers)**
+```powershell
+docker exec customer-service-ollama ollama pull granite3.3:2b
+docker exec customer-service-ollama ollama pull granite-embedding:278m
+```
 
-### Embedding Models
+启动应用：
 
-Vector transformation (embeddings) with LLMs via different model providers:
+```powershell
+.\gradlew.bat bootRun
+```
 
-* **[Mistral AI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/models/embedding/embedding-mistral-ai)**
-* **[Ollama](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/models/embedding/embedding-ollama)**
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/models/embedding/embedding-openai)**
-* **[ONNX Transformers](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/models/embedding/embedding-transformers)**
+应用启动时会读取 `src/main/resources/documents` 中的 Markdown 文件并写入 PGVector。
 
-### Image Models
+## 接口
 
-Image generation with LLMs via different model providers:
+### 流式客服问答
 
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/models/image/image-openai)**
+```http
+POST /api/customer-service/chat/stream
+Content-Type: application/json
+Accept: text/event-stream
+```
 
-### Audio Models
+请求示例：
 
-Speech generation with LLMs via different model providers:
+```json
+{
+  "sessionId": "demo-session-001",
+  "question": "退款审核通过后多久可以到账？"
+}
+```
 
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/models/audio/speech-to-text-openai)**
+命中知识库时依次返回 `sources`、多个 `message` 和 `done` 事件。未命中时返回 `handoff` 事件及工单编号。
 
-Speech transcription with LLMs via different model providers:
+### 查询人工工单
 
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/models/audio/text-to-speech-openai)**
+```http
+GET /api/customer-service/tickets/{ticketId}
+```
 
-### Moderation Models
+当前工单存储在内存中，仅用于演示；重启应用后数据会清空。
 
-_Coming soon_
+## 配置项
 
-## 📐 Patterns
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/customer_service` | PostgreSQL 地址 |
+| `DB_USERNAME` | `postgres` | 数据库用户名 |
+| `DB_PASSWORD` | `postgres` | 数据库密码 |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama 地址 |
+| `OLLAMA_CHAT_MODEL` | `granite3.3:2b` | 对话模型 |
+| `OLLAMA_EMBEDDING_MODEL` | `granite-embedding:278m` | 向量模型 |
+| `KNOWLEDGE_INGESTION_ENABLED` | `true` | 是否在启动时执行知识入库 |
 
-### Prompts, Messages, and Templates
+## 测试
 
-Prompting using simple text:
+```powershell
+.\gradlew.bat test
+```
 
-* **[Ollama](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/prompts/prompts-basics-ollama)**
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/prompts/prompts-basics-openai)**
+## 本人改造内容
 
-Prompting using structured messages and roles:
+- 从上游多模块示例中提取并整理单一 RAG 应用
+- 将故事文档替换为电商订单、物流和售后知识库
+- 增加显式向量检索、来源返回及 SSE 流式事件
+- 增加知识库未命中的人工工单兜底
+- 增加 Docker Compose、环境变量配置和单元测试
+- 删除外部搜索和与业务无关的示例模块
 
-* **[Ollama](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/prompts/prompts-messages-ollama)**
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/prompts/prompts-messages-openai)**
+## 开源说明
 
-Prompting using templates:
-
-* **[Ollama](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/prompts/prompts-templates-ollama)**
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/prompts/prompts-templates-openai)**
-
-### Structured Output
-
-Converting LLM output to structured JSON and Java objects:
-
-* **[Ollama](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/structured-output/structured-output-ollama)**
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/structured-output/structured-output-openai)**
-
-### Multimodality
-
-Including various media in prompts with LLMs:
-
-* **[Mistral AI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/multimodality/multimodality-mistral-ai)**
-* **[Ollama](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/multimodality/multimodality-ollama)**
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/multimodality/multimodality-openai)**
-
-### Tool Calling
-
-Tool calling with LLMs via different model providers:
-
-* **[Mistral AI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/tool-calling/tool-calling-mistral-ai)**
-* **[Ollama](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/tool-calling/tool-calling-ollama)**
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/tool-calling/tool-calling-openai)**
-
-### Memory
-
-Using chat memory to preserve context in conversations with LLMs:
-
-* **[Basic Chat Memory](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/memory/memory-basics)**
-* **[JDBC Chat Memory](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/memory/memory-jdbc)**
-* **[Spring Security Chat Memory](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/memory/memory-spring-security)**
-* **[Vector Store Chat Memory](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/patterns/memory/memory-vector-store)**
-
-### Guardrails
-
-Guardrails for input and output with LLMs via different model providers:
-
-* **[Input Guardrails](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/guardrails/guardrails-input)**
-* **[Output Guardrails](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/guardrails/guardrails-output)**
-
-## 📥 Data Ingestion
-
-### Document Readers
-
-Reading and vectorizing documents with LLMs via Ollama:
-
-* **[JSON](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/data-ingestion/document-readers/document-readers-json-ollama)**
-* **[Markdown](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/data-ingestion/document-readers/document-readers-markdown-ollama)**
-* **[PDF](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/data-ingestion/document-readers/document-readers-text-ollama)**
-* **[Text](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/data-ingestion/document-readers/document-readers-text-ollama)**
-* **[Tika](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/data-ingestion/document-readers/document-readers-tika-ollama)**
-
-### Document Transformers
-
-Document transformation with LLMs via Ollama:
-
-* **[Metadata](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/data-ingestion/document-transformers/document-transformers-metadata-ollama)**  
-  Enrich documents with keywords and summary metadata for enhanced retrieval.
-* **[Splitters](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/data-ingestion/document-transformers/document-transformers-splitters-ollama)**  
-  Divide documents into chunks to fit the LLM context window.
-
-## 🔢 Vector Stores
-
-_Coming soon_
-
-## 🔄 Retrieval Augmented Generation (RAG)
-
-Question answering with documents using different RAG flows (with Ollama and PGVector):
-
-### Sequential RAG
-
-* **[Naive](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/rag/rag-sequential/rag-naive)**
-* **[Advanced](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/rag/rag-sequential/rag-advanced)**
-
-### Branching RAG
-
-* **[Branching](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/rag/rag-branching)**
-
-### Conditional RAG
-
-* **[Conditional](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/rag/rag-conditional)**
-
-## 📊 Observability
-
-### LLM Observability
-
-LLM Observability for different model providers:
-
-* **[Mistral AI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/observability/observability-models-mistral-ai)**
-* **[Ollama](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/observability/observability-models-ollama)**
-* **[OpenAI](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/observability/observability-models-openai)**
-
-### Vector Store Observability
-
-Vector Store Observability for different vector stores:
-
-* **[PGVector](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/observability/observability-vector-stores-pgvector)**
-
-## ⚙️ Model Context Protocol
-
-Integrations with MCP Servers for providing contexts to LLMs.
-
-* **[Brave Search API](https://github.com/ThomasVitale/llm-apps-java-spring-ai/tree/main/mcp/mcp-clients/mcp-brave)**
-
-## 📋 Evaluation
-
-_Coming soon_
-
-## 🤖 Agents
-
-_Coming soon_
-
-## 📚 References and Additional Resources
-
-* [Spring AI Reference Documentation](https://docs.spring.io/spring-ai/reference/index.html)
-
-### Conferences
-
-* [Introducing Spring AI by Christian Tzolov and Mark Pollack (Spring I/O 2024)](https://www.youtube.com/watch?v=umKbaXsiCOY)
-* [Spring AI Is All You Need by Christian Tzolov (GOTO Amsterdam 2024)](https://www.youtube.com/watch?v=vuhMti8B5H0)
-* [Concerto for Java and AI - Building Production-Ready LLM Applications by Thomas Vitale (Devoxx UK 2025)](https://www.youtube.com/watch?v=CVsYMIpuFIU)
-* [Modular RAG Architectures with Java and Spring AI by Thomas Vitale (Spring I/O 2025)](https://www.youtube.com/watch?v=yQQEnXRMvUA)
-
-### Videos
-
-* [Building Intelligent Applications With Spring AI by Dan Vega (JetBrains Live Stream)](https://www.youtube.com/watch?v=x6KmUyPWy2Q)
-* [Spring AI Series by Dan Vega](https://www.youtube.com/playlist?list=PLZV0a2jwt22uoDm3LNDFvN6i2cAVU_HTH)
-* [Spring AI Series by Craig Walls](https://www.youtube.com/playlist?list=PLH5OU4wXVJc9aECkMUVPCi8g3pzs8pZ3E)
-* [Spring AI Series by Josh Long](https://www.youtube.com/playlist?list=PLgGXSWYM2FpMXvYb681axdH5JSLEPPyrz)
-
-### Demos
-
-* [Airline Customer Support (Marcus Hellberg)](https://github.com/marcushellberg/java-ai-playground/tree/spring-ai)
-* [Composer Assistant (Thomas Vitale)](https://github.com/ThomasVitale/concerto-for-java-and-ai)
-* [Document Assistant (Marcus Hellberg)](https://github.com/marcushellberg/docs-assistant)
-* [Flight Booking (Christian Tzolov)](https://github.com/tzolov/playground-flight-booking)
-
-### Workshops
-
-* [Spring AI - Zero to Hero (Adib Saikali, Christian Tzolov)](https://github.com/asaikali/spring-ai-zero-to-hero/tree/main)
-* [AI Applications with Java and Spring AI (Thomas Vitale)](https://github.com/ThomasVitale/java-ai-workshop)
+本项目基于 `ThomasVitale/llm-apps-java-spring-ai` 中的 RAG 示例改造，保留原项目提交历史、版权信息和 Apache License 2.0。新增客服业务模型、接口、知识库内容、人工兜底流程及运行文档由本仓库维护者实现。

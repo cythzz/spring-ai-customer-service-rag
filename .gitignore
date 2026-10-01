@@ -24,6 +24,8 @@ hs_err_pid*
 
 HELP.md
 .gradle
+.agent-build/
+**/.agent-build/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/

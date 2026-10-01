@@ -25,15 +25,12 @@ dependencies {
     implementation 'org.springframework.ai:spring-ai-markdown-document-reader'
     implementation 'org.springframework.ai:spring-ai-rag'
 
-    testAndDevelopmentOnly 'io.arconia:arconia-dev-services-ollama'
-    testAndDevelopmentOnly 'io.arconia:arconia-dev-services-postgresql'
-
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 dependencyManagement {
     imports {
-        mavenBom "io.arconia:arconia-bom:${arconiaVersion}"
         mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
     }
 }
