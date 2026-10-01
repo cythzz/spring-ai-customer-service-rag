@@ -1,4 +1,4 @@
-package com.thomasvitale.ai.spring;
+package com.cythzz.ai.spring;
 
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;

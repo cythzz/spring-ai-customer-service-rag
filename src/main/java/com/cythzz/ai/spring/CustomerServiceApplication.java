@@ -1,13 +1,13 @@
-package com.thomasvitale.ai.spring;
+package com.cythzz.ai.spring;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class RagNaive {
+public class CustomerServiceApplication {
 
     static void main(String[] args) {
-        SpringApplication.run(RagNaive.class, args);
+        SpringApplication.run(CustomerServiceApplication.class, args);
     }
 
 }

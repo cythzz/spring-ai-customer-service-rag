@@ -1,10 +1,8 @@
-package com.thomasvitale.ai.spring;
+package com.cythzz.ai.spring;
 
-import com.thomasvitale.ai.spring.components.SearchEngineDocumentRetriever;
+import com.cythzz.ai.spring.components.SearchEngineDocumentRetriever;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
-import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;

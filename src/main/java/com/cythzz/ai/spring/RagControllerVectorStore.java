@@ -1,4 +1,4 @@
-package com.thomasvitale.ai.spring;
+package com.cythzz.ai.spring;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;

@@ -1,4 +1,4 @@
-package com.thomasvitale.ai.spring.components;
+package com.cythzz.ai.spring.components;
 
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
