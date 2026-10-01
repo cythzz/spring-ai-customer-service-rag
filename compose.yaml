@@ -1,4 +1,23 @@
 services:
+  app:
+    build: .
+    container_name: customer-service-app
+    environment:
+      DB_URL: jdbc:postgresql://pgvector:5432/customer_service
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      OLLAMA_BASE_URL: http://ollama:11434
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318/v1/traces
+    ports:
+      - "8080:8080"
+    depends_on:
+      pgvector:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+
   pgvector:
     image: pgvector/pgvector:pg17
     container_name: customer-service-pgvector
@@ -23,6 +42,35 @@ services:
       - "11434:11434"
     volumes:
       - ollama-data:/root/.ollama
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: customer-service-prometheus
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    container_name: customer-service-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.132.0
+    container_name: customer-service-otel
+    command: ["--config=/etc/otelcol/config.yml"]
+    volumes:
+      - ./observability/otel-collector.yml:/etc/otelcol/config.yml:ro
+    ports:
+      - "4318:4318"
 
 volumes:
   pgvector-data:

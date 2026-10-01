@@ -11,6 +11,10 @@
 - Top-K 相似度检索和来源返回
 - SSE 流式输出
 - 知识库未命中自动创建人工工单
+- Spring AI `@Tool` 受控工具调用（本地演示订单查询）
+- 提示注入基础拦截与工具结果边界
+- Actuator、Prometheus 指标和 OpenTelemetry 链路追踪
+- GitHub Actions 自动编译测试
 - 本地 Docker Compose 环境，无网络爬虫
 
 ## 处理流程
@@ -22,8 +26,9 @@
   → PGVector
 
 用户问题
-  → 相似度检索
+  → 输入安全检查 → 相似度检索
   ├─ 命中：拼装上下文 → Ollama → SSE 流式回答
+  │                         └─ 需要订单状态：调用本地 Order Tool
   └─ 未命中：创建内存工单 → 返回 handoff 事件
 ```
 
@@ -34,10 +39,10 @@
 
 ## 启动
 
-启动 PGVector 和 Ollama：
+一键构建并启动应用、PGVector、Ollama、Prometheus、Grafana 和 OTel Collector：
 
 ```powershell
-docker compose up -d
+docker compose up -d --build
 ```
 
 首次运行建议预先下载模型：
@@ -47,9 +52,10 @@ docker exec customer-service-ollama ollama pull granite3.3:2b
 docker exec customer-service-ollama ollama pull granite-embedding:278m
 ```
 
-启动应用：
+如需在 IDEA 中调试，只启动基础设施并本地运行应用：
 
 ```powershell
+docker compose up -d pgvector ollama otel-collector prometheus grafana
 .\gradlew.bat bootRun
 ```
 
@@ -84,6 +90,16 @@ GET /api/customer-service/tickets/{ticketId}
 
 当前工单存储在内存中，仅用于演示；重启应用后数据会清空。
 
+可用演示订单为 `ORDER-1001`、`ORDER-1002` 和 `ORDER-1003`。模型只有在回答订单状态问题时才允许调用本地查询工具；工具不会连接真实电商系统。
+
+## 可观测性
+
+- 健康检查：`/actuator/health`
+- Prometheus 指标：`/actuator/prometheus`
+- Prometheus 控制台：本机 `9090`
+- Grafana：本机 `3000`（默认账号和密码均为 `admin`）
+- OTel Collector 接收应用 OTLP/HTTP Trace，并在容器日志中输出调试信息
+
 ## 配置项
 
 | 环境变量 | 默认值 | 说明 |
@@ -108,7 +124,8 @@ GET /api/customer-service/tickets/{ticketId}
 - 将故事文档替换为电商订单、物流和售后知识库
 - 增加显式向量检索、来源返回及 SSE 流式事件
 - 增加知识库未命中的人工工单兜底
-- 增加 Docker Compose、环境变量配置和单元测试
+- 增加本地订单工具调用、提示注入防护及对应单元测试
+- 增加 Docker Compose、CI、Prometheus 和 OpenTelemetry
 - 删除外部搜索和与业务无关的示例模块
 
 ## 开源说明
