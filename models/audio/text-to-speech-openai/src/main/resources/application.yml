@@ -1,7 +1,0 @@
-spring:
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY}
-      audio:
-        speech:
-            model: tts-1

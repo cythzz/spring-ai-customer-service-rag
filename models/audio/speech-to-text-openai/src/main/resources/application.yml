@@ -1,7 +1,0 @@
-spring:
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY}
-      audio:
-        transcription:
-            model: whisper-1

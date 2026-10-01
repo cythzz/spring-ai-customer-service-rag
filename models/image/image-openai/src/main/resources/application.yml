@@ -1,6 +1,0 @@
-spring:
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY}
-      image:
-          model: dall-e-2
